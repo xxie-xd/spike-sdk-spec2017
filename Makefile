@@ -219,3 +219,7 @@ SD_CARD ?= /dev/sdb
 .PHONY: make_sd
 make_sd: $(bbl)
 	sudo dd if=$(bbl).bin of=$(SD_CARD)1 bs=4096
+
+.PHONY: spec
+spec:
+	$(MAKE) -C spec2017 -j1

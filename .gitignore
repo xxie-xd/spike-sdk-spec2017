@@ -8,3 +8,5 @@ toolchain/
 rootfs/
 log
 
+spec2017/bbl-*
+
