@@ -3,18 +3,16 @@
 # set -x
 
 # subrepo_fetch_loop(repo, extra update option)
-subrepo_fetch_loop() {
+subrepo_shallow_fetch_loop() {
 depth=10
-step=100
 until git submodule update --init ${2} --depth $depth --progress ${1}
 do
-	depth=$(($depth + $step))
-	echo "[v] Set depth to $depth ..."
+	echo "[e] Fail to shallow fetch submodule ${2}, retry..."
 done
 }
 
-# fetch_repo(parent directory, repo list, extra update option)
-fetch_repo() {
+# shallow_fetch_repo(parent directory, repo list, extra update option)
+shallow_fetch_repo() {
 
 echo "[*] Update repositories under ${1}"
 cd ${1}
@@ -22,8 +20,33 @@ cd ${1}
 for repo in ${2}
 do
 	commit=$(git submodule status | grep -oe "\([0-9a-z]*\) $repo" | grep -oe "^\([0-9a-z]*\)")
-	echo "[-] $repo -> $commit"
-	subrepo_fetch_loop $repo "${3}"
+	echo "[-] shallow fetch $repo -> $commit"
+	subrepo_shallow_fetch_loop $repo "${3}"
+done
+
+cd $root
+}
+
+# subrepo_fetch_loop(repo, extra update option)
+subrepo_full_fetch_loop() {
+depth=10
+until git submodule update --init ${2} --recursive --progress ${1}
+do
+	echo "[e] Fail to shallow fetch submodule ${2}, retry..."
+done
+}
+
+# full_fetch_repo(parent directory, repo list, extra update option)
+full_fetch_repo() {
+
+echo "[*] Update repositories under ${1}"
+cd ${1}
+
+for repo in ${2}
+do
+	commit=$(git submodule status | grep -oe "\([0-9a-z]*\) $repo" | grep -oe "^\([0-9a-z]*\)")
+	echo "[-] fully fetch $repo -> $commit"
+	subrepo_full_fetch_loop $repo "${3}"
 done
 
 cd $root
@@ -32,11 +55,15 @@ cd $root
 root="$(dirname "$(readlink -f "$0")")"
 NJOB=4
 
-root_repo_list=${ROOT_LIST:-"buildroot riscv-gnu-toolchain riscv-pk linux riscv-isa-sim"}
-toolchain_repo_list=${TOOLCHAIN_LIST:-"binutils gcc glibc newlib gdb"}
+shallow_repo_list=${REPO_LIST:-"buildroot linux"}
+full_repo_list=${REPO_LIST:-"riscv-pk"}
 
-fetch_repo "$root/repo" "$root_repo_list" "--jobs $NJOB"
-fetch_repo "$root/repo/riscv-gnu-toolchain" "$toolchain_repo_list" "--recursive --jobs $NJOB"
+
+shallow_fetch_repo "$root/repo" "$shallow_repo_list" "--jobs $NJOB"
+full_fetch_repo "$root/repo" "$full_repo_list" "--jobs $NJOB"
+
+#toolchain_repo_list=${TOOLCHAIN_LIST:-"binutils gcc glibc newlib gdb"}
+#shallow_fetch_repo "$root/repo/riscv-gnu-toolchain" "$toolchain_repo_list" "--recursive --jobs $NJOB"
 
 echo "[*] done"
 

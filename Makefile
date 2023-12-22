@@ -15,7 +15,7 @@ wrkdir := $(CURDIR)/build
 
 toolchain_srcdir := $(srcdir)/riscv-gnu-toolchain
 toolchain_wrkdir := $(wrkdir)/riscv-gnu-toolchain
-toolchain_dest := $(CURDIR)/toolchain
+toolchain_dest := $(RISCV)
 
 buildroot_srcdir := $(srcdir)/buildroot
 buildroot_initramfs_wrkdir := $(topdir)/rootfs/buildroot_initramfs
@@ -59,7 +59,7 @@ all: sim
 newlib: $(RISCV)/bin/$(target_newlib)-gcc
 
 
-ifneq ($(RISCV),$(toolchain_dest))
+ifneq ($(RISCV),$(CURDIR)/toolchain)
 $(RISCV)/bin/$(target_linux)-gcc:
 	$(error The RISCV environment variable was set, but is not pointing at a toolchain install tree)
 endif
@@ -207,7 +207,7 @@ qemu: $(qemu) $(fw_jump)
 	$(qemu) -nographic -machine virt -cpu rv64,sv57=on -bios $(fw_jump) -kernel $(linux_image)
 else ifeq ($(BL),bbl)
 .PHONY: sim
-sim: $(bbl) $(spike)
+sim: $(bbl)
 	$(spike) --isa=$(ISA)_zicntr_zihpm $(bbl)
 
 .PHONY: qemu
