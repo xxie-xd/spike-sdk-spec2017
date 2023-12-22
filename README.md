@@ -1,5 +1,23 @@
 ![logo](./conf/logo.png)
 
+# Prepare for running SPEC CPU 2017 on Spike
+
+~~~
+
+# the minimal download of submodules
+./quickstart.sh
+
+# generate the initial linux image bbl
+make bbl
+
+# suppose the SPEC CPU 2017 is compiled using linux-gnu riscv cross-compiler
+# take a look of spec2017/Makefile and set the SPECKLE variable
+make spec
+
+# now a separate bbl file is generated for each intrate/fprate benchmark cases
+
+~~~
+
 # RISC-V Spike Simulator SDK
 
 In the recent version of the riscv-tools and freedom-u-sdk, both of them removed the support of the spike simulator, and tutorials about running Linux on spike is using static compiled busybox, which is not suitable for real test environments. Spike is the simplest simulator of RISC-V, it has a very clear description of the instructions, you can apply your ideas and check it for a quick try. The **R**ISC-V **S**pike **S**imulator SDK wants to help people to test design with 64-bit Linux environment on Spike easily, the basic framework is based on Freedom U SDK version 1.0.
