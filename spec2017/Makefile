@@ -38,13 +38,13 @@ all_cases = $(intrate_cases) $(fprate_cases)
 .PHONY: all
 all: $(SPECKLE) $(all_cases)
 
-$(intrate_cases): bbl-%: $(SPECKLE)/build/overlay/intrate/%
+$(intrate_cases): bbl-%: $(SPECKLE)/build/overlay/intrate/% ../rootfs/buildroot_initramfs_sysroot
 	-rm -fr $(SPEC_DIR)
 	cp -pr $< $(SPEC_DIR)
 	$(MAKE) -C ../ bbl
 	mv ../build/riscv-pk/bbl $@
 
-$(fprate_cases): bbl-%: $(SPECKLE)/build/overlay/fprate/%
+$(fprate_cases): bbl-%: $(SPECKLE)/build/overlay/fprate/% ../rootfs/buildroot_initramfs_sysroot
 	-rm -fr $(SPEC_DIR)
 	cp -pr $< $(SPEC_DIR)
 	$(MAKE) -C ../ bbl

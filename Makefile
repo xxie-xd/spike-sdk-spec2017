@@ -6,6 +6,7 @@ ISA ?= rv64imafdc_zifencei_zicsr
 ABI ?= lp64d
 BL ?= bbl
 BOARD ?= spike
+NCORE ?= `nproc`
 
 topdir := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 topdir := $(topdir:/=)
@@ -88,7 +89,7 @@ $(buildroot_initramfs_wrkdir)/.config: $(buildroot_srcdir)
 	$(MAKE) -C $< RISCV=$(RISCV) PATH="$(PATH)" O=$(buildroot_initramfs_wrkdir) olddefconfig CROSS_COMPILE=riscv64-unknown-linux-gnu-
 
 $(buildroot_initramfs_tar): $(buildroot_srcdir) $(buildroot_initramfs_wrkdir)/.config $(RISCV)/bin/$(target_linux)-gcc $(buildroot_initramfs_config)
-	$(MAKE) -C $< RISCV=$(RISCV) PATH="$(PATH)" O=$(buildroot_initramfs_wrkdir)
+	$(MAKE) -C $< RISCV=$(RISCV) PATH="$(PATH)" O=$(buildroot_initramfs_wrkdir) -j$(NCORE)
 
 .PHONY: buildroot_initramfs-menuconfig
 buildroot-menuconfig: $(buildroot_initramfs_wrkdir)/.config $(buildroot_srcdir)
@@ -123,7 +124,7 @@ $(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroo
 		CONFIG_INITRAMFS_ROOT_GID=$(shell id -g) \
 		CROSS_COMPILE=riscv64-unknown-linux-gnu- \
 		ARCH=riscv \
-		all
+		all -j$(NCORE)
 
 $(vmlinux_stripped): $(vmlinux)
 	$(target_linux)-strip -o $@ $<
@@ -145,7 +146,7 @@ $(bbl): $(pk_srcdir) $(vmlinux_stripped)
 		--enable-logo \
 		--with-logo=$(abspath conf/logo.txt) \
 		--with-dts=$(DTS)
-	CFLAGS="-mabi=$(ABI) -march=$(ISA)" $(MAKE) -C $(pk_wrkdir)
+	CFLAGS="-mabi=$(ABI) -march=$(ISA)" $(MAKE) -C $(pk_wrkdir) -j$(NCORE)
 
 
 $(pk): $(pk_srcdir) $(RISCV)/bin/$(target_newlib)-gcc
@@ -220,6 +221,9 @@ SD_CARD ?= /dev/sdb
 make_sd: $(bbl)
 	sudo dd if=$(bbl).bin of=$(SD_CARD)1 bs=4096
 
+$(buildroot_initramfs_sysroot)/usr/bin/timed-run: rsa/timed-run.cpp
+	riscv64-unknown-linux-gnu-g++ $< -o $@
+
 .PHONY: spec
-spec:
+spec: $(buildroot_initramfs_sysroot)/usr/bin/timed-run
 	$(MAKE) -C spec2017 -j1
