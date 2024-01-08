@@ -7,6 +7,8 @@ ABI ?= lp64d
 BL ?= bbl
 BOARD ?= spike
 NCORE ?= `nproc`
+SPIKE_SPEC ?= spike -p1
+SPECKLE ?= /set/to/your/speckle/build/overlay
 
 topdir := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 topdir := $(topdir:/=)
@@ -117,7 +119,7 @@ ifeq ($(ISA),$(filter rv32%,$(ISA)))
 	$(MAKE) -C $(linux_srcdir) O=$(linux_wrkdir) ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- olddefconfig
 endif
 
-$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) 
+$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) $(buildroot_initramfs_sysroot)/usr/bin/timed-run $(buildroot_initramfs_sysroot)/usr/bin/mount-spec
 	$(MAKE) -C $< O=$(linux_wrkdir) \
 		CONFIG_INITRAMFS_SOURCE="$(confdir)/initramfs.txt $(buildroot_initramfs_sysroot)" \
 		CONFIG_INITRAMFS_ROOT_UID=$(shell id -u) \
@@ -195,6 +197,8 @@ fw_image: $(fw_jump)
 .PHONY: clean mrproper
 clean:
 	rm -rf -- $(wrkdir)
+	-rm spec2017/cusom.dt*
+	-rm spec2017/bbl
 
 mrproper:
 	rm -rf -- $(wrkdir) $(toolchain_dest) $(topdir)/rootfs
@@ -224,6 +228,23 @@ make_sd: $(bbl)
 $(buildroot_initramfs_sysroot)/usr/bin/timed-run: rsa/timed-run.cpp
 	riscv64-unknown-linux-gnu-g++ $< -o $@
 
-.PHONY: spec
-spec: $(buildroot_initramfs_sysroot)/usr/bin/timed-run
-	$(MAKE) -C spec2017 -j1
+$(buildroot_initramfs_sysroot)/usr/bin/mount-spec:
+	mkdir -p $(buildroot_initramfs_sysroot)/root/spec
+	echo "mount -t 9p -o msize=8192 /dev/root /root/spec" > $@
+	chmod u+x $@
+
+.PHONY: install
+install: $(bbl)
+	cp $(bbl) $(RISCV)/bin
+
+.PHONY: install-spec
+install-spec: spec2017/custom.patch
+	$(MAKE) -C $(pk_wrkdir) clean
+	cd spec2017 && $(SPIKE_SPEC) --dump-dts bbl > custom.dts
+	cd spec2017 && patch -p1 < custom.patch
+	dtc -O dtb spec2017/custom.dts -o spec2017/custom.dtb && cp spec2017/custom.dtb $(pk_wrkdir)/
+	$(MAKE) -C $(pk_wrkdir) && cp $(bbl) spec2017/
+	rm $(pk_wrkdir)/custom.dtb
+	$(MAKE) -C $(pk_wrkdir) clean
+	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/custom.dtb --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=$(SPECKLE)\" $(CURDIR)/spec2017/bbl" > $(RISCV)/bin/spike-spec
+	chmod u+x $(RISCV)/bin/spike-spec
