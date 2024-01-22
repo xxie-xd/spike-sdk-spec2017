@@ -226,7 +226,7 @@ make_sd: $(bbl)
 	sudo dd if=$(bbl).bin of=$(SD_CARD)1 bs=4096
 
 $(buildroot_initramfs_sysroot)/usr/bin/timed-run: rsa/timed-run.cpp
-	riscv64-unknown-linux-gnu-g++ $< -o $@
+	riscv64-unknown-linux-gnu-g++ -I$(RISCV)/include -static $< -o $@
 
 $(buildroot_initramfs_sysroot)/usr/bin/mount-spec:
 	mkdir -p $(buildroot_initramfs_sysroot)/root/spec
@@ -246,5 +246,5 @@ install-spec: spec2017/custom.patch
 	$(MAKE) -C $(pk_wrkdir) && cp $(bbl) spec2017/
 	rm $(pk_wrkdir)/custom.dtb
 	$(MAKE) -C $(pk_wrkdir) clean
-	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/custom.dtb --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=$(SPECKLE)\" $(CURDIR)/spec2017/bbl" > $(RISCV)/bin/spike-spec
+	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/custom.dtb $${@:1} --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=$(SPECKLE)\" $(CURDIR)/spec2017/bbl" > $(RISCV)/bin/spike-spec
 	chmod u+x $(RISCV)/bin/spike-spec

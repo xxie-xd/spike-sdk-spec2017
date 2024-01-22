@@ -22,15 +22,18 @@
 #include <spawn.h>
 #include <sys/wait.h>
 
-using namespace std::chrono_literals;
+#include "flexicas/flexicas-pfc.h"
+static const unsigned int CSR_FLAXICAS_PFC = 0x8F0;
 
 class PFCRecord {
 public:
-  void start() {}
-  void end() {}
+  void start() { write_csr(0x8F0, FLEXICAS_PFC_START); }
+  void end() { write_csr(0x8F0, FLEXICAS_PFC_STOP); }
 };
 
 static PFCRecord pfc;
+
+using namespace std::chrono_literals;
 
 void run_cmd(char *argv[], char* envp[], uint64_t max_instret) {
   pid_t pid;
