@@ -23,7 +23,6 @@
 #include <sys/wait.h>
 
 #include "flexicas/flexicas-pfc.h"
-static const unsigned int CSR_FLAXICAS_PFC = 0x8F0;
 
 class PFCRecord {
 public:
