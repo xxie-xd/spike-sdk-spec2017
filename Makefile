@@ -226,7 +226,7 @@ make_sd: $(bbl)
 	sudo dd if=$(bbl).bin of=$(SD_CARD)1 bs=4096
 
 $(buildroot_initramfs_sysroot)/usr/bin/timed-run: rsa/timed-run.cpp
-	riscv64-unknown-linux-gnu-g++ $< -o $@
+	riscv64-unknown-linux-gnu-g++ -I$(RISCV)/include -static $< -o $@
 
 $(buildroot_initramfs_sysroot)/usr/bin/mount-spec:
 	mkdir -p $(buildroot_initramfs_sysroot)/root/spec
