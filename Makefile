@@ -7,7 +7,7 @@ ABI ?= lp64d
 BL ?= bbl
 BOARD ?= spike
 NCORE ?= `nproc`
-SPIKE_SPEC ?= spike -p1
+SPIKE_SPEC ?= spike -p2
 SPECKLE ?= /set/to/your/speckle/build/overlay
 
 topdir := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -248,3 +248,5 @@ install-spec: spec2017/custom.patch
 	$(MAKE) -C $(pk_wrkdir) clean
 	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/custom.dtb \$${@:1} --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=$(SPECKLE)\" $(CURDIR)/spec2017/bbl" > $(RISCV)/bin/spike-spec
 	chmod u+x $(RISCV)/bin/spike-spec
+	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/custom.dtb \$${@:2} --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=\$$1\" $(CURDIR)/spec2017/bbl" > $(RISCV)/bin/spike-share
+	chmod u+x $(RISCV)/bin/spike-share
