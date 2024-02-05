@@ -243,7 +243,7 @@ install-spec: spec2017/custom.patch
 	cd spec2017 && $(SPIKE_SPEC) --dump-dts bbl > custom.dts
 	cd spec2017 && patch -p1 < custom.patch
 	dtc -O dtb spec2017/custom.dts -o spec2017/custom.dtb && cp spec2017/custom.dtb $(pk_wrkdir)/
-	$(MAKE) -C $(pk_wrkdir) && cp $(bbl) spec2017/
+	CFLAGS="-mabi=$(ABI) -march=$(ISA)" $(MAKE) -C $(pk_wrkdir) && cp $(bbl) spec2017/
 	rm $(pk_wrkdir)/custom.dtb
 	$(MAKE) -C $(pk_wrkdir) clean
 	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/custom.dtb \$${@:1} --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=$(SPECKLE)\" $(CURDIR)/spec2017/bbl" > $(RISCV)/bin/spike-spec
