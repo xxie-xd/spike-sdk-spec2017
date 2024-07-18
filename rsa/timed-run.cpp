@@ -50,7 +50,7 @@ void run_cmd(char *argv[], char* envp[], uint64_t max_instret) {
   //std::cerr << "[timed-run] " << read_time() << ": successfully started with initial reading of " << instret_start << " instructions." << std::endl;
   pfc.start();
   int s, status;
-  while(instret_now - instret_start < max_instret) {
+  while(max_instret == 0 || instret_now - instret_start < max_instret) {
     s = waitpid(pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
     if(0 == s) { // child is running
       std::this_thread::sleep_for(100ms);
