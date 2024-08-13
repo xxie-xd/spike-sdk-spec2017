@@ -8,6 +8,7 @@ BL ?= bbl
 BOARD ?= spike
 NCORE ?= `nproc`
 SPIKE_SPEC ?= spike -p1
+SPIKE_DUAL ?= spike -p2
 SPECKLE ?= /set/to/your/speckle/build/overlay
 
 topdir := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -245,14 +246,26 @@ $(buildroot_initramfs_sysroot)/usr/bin/mount-spec:
 install: $(bbl)
 	cp $(bbl) $(RISCV)/bin
 
-.PHONY: install-spec
+.PHONY: install-spec install-attack
+
 install-spec: spec2017/custom.patch
 	$(MAKE) -C $(pk_wrkdir) clean
 	cd spec2017 && $(SPIKE_SPEC) --dump-dts bbl > custom.dts
 	cd spec2017 && patch -p1 < custom.patch
-	dtc -O dtb spec2017/custom.dts -o spec2017/custom.dtb && cp spec2017/custom.dtb $(pk_wrkdir)/
-	CFLAGS="-mabi=$(ABI) -march=$(ISA)" $(MAKE) -C $(pk_wrkdir) && cp $(bbl) spec2017/
+	dtc -O dtb spec2017/custom.dts -o spec2017/spec.dtb && cp spec2017/spec.dtb $(pk_wrkdir)/custom.dtb
+	CFLAGS="-mabi=$(ABI) -march=$(ISA)" $(MAKE) -C $(pk_wrkdir) && cp $(bbl) spec2017/spec-bbl
 	rm $(pk_wrkdir)/custom.dtb
 	$(MAKE) -C $(pk_wrkdir) clean
-	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/custom.dtb \$${@:1} --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=$(SPECKLE)\" $(CURDIR)/spec2017/bbl" > $(RISCV)/bin/spike-spec
+	echo "$(SPIKE_SPEC) --dtb=$(CURDIR)/spec2017/spec.dtb \$${@:1} --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=$(SPECKLE)\" $(CURDIR)/spec2017/spec-bbl" > $(RISCV)/bin/spike-spec
 	chmod u+x $(RISCV)/bin/spike-spec
+
+install-attack: spec2017/custom.patch
+	$(MAKE) -C $(pk_wrkdir) clean
+	cd spec2017 && $(SPIKE_DUAL) --dump-dts bbl > custom.dts
+	cd spec2017 && patch -p1 < custom.patch
+	dtc -O dtb spec2017/custom.dts -o spec2017/dual.dtb && cp spec2017/dual.dtb $(pk_wrkdir)/custom.dtb
+	CFLAGS="-mabi=$(ABI) -march=$(ISA)" $(MAKE) -C $(pk_wrkdir) && cp $(bbl) spec2017/attack-bbl
+	rm $(pk_wrkdir)/custom.dtb
+	$(MAKE) -C $(pk_wrkdir) clean
+	echo "$(SPIKE_DUAL) --dtb=$(CURDIR)/spec2017/dual.dtb \$${@:2} --extlib=libvirtio9pdiskdevice.so --device=\"virtio9p,path=\$$1\" $(CURDIR)/spec2017/attack-bbl" > $(RISCV)/bin/spike-attack
+	chmod u+x $(RISCV)/bin/spike-attack
