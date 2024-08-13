@@ -26,15 +26,20 @@
 
 class PFCRecord {
 public:
-  void start() { write_csr(0x8F0, FLEXICAS_PFC_START); }
-  void end() { write_csr(0x8F0, FLEXICAS_PFC_STOP); }
+  void start() { write_csr(0x8F0, FLEXICAS_PFC_CMD|FLEXICAS_PFC_START); }
+  void end() { write_csr(0x8F0, FLEXICAS_PFC_CMD|FLEXICAS_PFC_STOP); }
+  void prefix(const std::string &prefix) {
+    write_csr(0x8F0, FLEXICAS_PFC_CMD|FLEXICAS_PFC_STR_CLR); // clear pfc string buffer
+    for(auto c:prefix) write_csr(0x8F0, FLEXICAS_PFC_CMD|FLEXICAS_PFC_STR_CHAR|((0ull | c) << 16)); // send char
+    write_csr(0x8F0, FLEXICAS_PFC_CMD|FLEXICAS_PFC_PREFIX);
+  }
 };
 
 static PFCRecord pfc;
 
 using namespace std::chrono_literals;
 
-void run_cmd(char *argv[], char* envp[], uint64_t max_instret) {
+void run_cmd(char *argv[], char* envp[], uint64_t max_instret, const std::string &prefix) {
   pid_t pid;
   int rv = posix_spawnp(&pid, argv[0], NULL, NULL, argv, envp);
 
@@ -44,6 +49,8 @@ void run_cmd(char *argv[], char* envp[], uint64_t max_instret) {
       exit(1);
     } else exit(rv);
   }
+
+  if(!prefix.empty()) pfc.prefix(prefix);
 
   uint64_t instret_start = read_instret();
   uint64_t instret_now = instret_start;
@@ -59,6 +66,8 @@ void run_cmd(char *argv[], char* envp[], uint64_t max_instret) {
     } else break;
   }
 
+  pfc.end();
+
   if(s != 0) { // somthing is wrong
      if(s == -1)
        std::cerr << "waitpid() is NOT supported in this system!" << std::endl;
@@ -67,15 +76,34 @@ void run_cmd(char *argv[], char* envp[], uint64_t max_instret) {
      exit(1);
   }
 
-  pfc.end();
-
   kill(pid, SIGKILL);
   waitpid(pid, NULL, WNOHANG);
 }
 
 int main(int argc, char* argv[], char* envp[]) {
-  uint64_t max_instret = 1000000ull * std::stoll(std::string(argv[1]));
-  argv += 2;
-  run_cmd(argv, envp, max_instret);
+  unsigned int argi = 1;
+  std::string arguement, prefix;
+
+  while(true) {
+    arguement = std::string(argv[argi++]);
+
+    if(0 == arguement.compare(0,6,"--help")) {
+      std::cout << "Usage: timed-run <arguement list> num program <program's argument list>" << std::endl;
+      std::cout << "  argument list: --help          print this message." << std::endl;
+      std::cout << "                 --log=prefix    set the prefix for log files." << std::endl;
+      std::cout << "  num                            number of Million instructions to run," << std::endl;
+      std::cout << "                                 0 means run until program finishes."<< std::endl;
+      std::cout << "  program                        the program to run." << std::endl;
+      std::cout << "  program's argument list        the arguments for the guest program." << std::endl;
+      return 0;
+    } else if(0 == arguement.compare(0,6,"--log=")) {
+      prefix = arguement.substr(6);
+    } else
+      break;
+  }
+
+  uint64_t max_instret = 1000000ull * std::stoll(arguement);
+  argv += argi;
+  run_cmd(argv, envp, max_instret, prefix);
   return 0;
 }
