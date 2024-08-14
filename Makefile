@@ -120,7 +120,7 @@ ifeq ($(ISA),$(filter rv32%,$(ISA)))
 	$(MAKE) -C $(linux_srcdir) O=$(linux_wrkdir) ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- olddefconfig
 endif
 
-$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) $(buildroot_initramfs_sysroot)/usr/bin/timed-run $(buildroot_initramfs_sysroot)/usr/bin/mount-spec
+$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) $(buildroot_initramfs_sysroot)/usr/bin/timed-run $(buildroot_initramfs_sysroot)/usr/bin/mount-spec $(buildroot_initramfs_sysroot)/usr/bin/run-spec
 	$(MAKE) -C $< O=$(linux_wrkdir) \
 		CONFIG_INITRAMFS_SOURCE="$(confdir)/initramfs.txt $(buildroot_initramfs_sysroot)" \
 		CONFIG_INITRAMFS_ROOT_UID=$(shell id -u) \
@@ -236,6 +236,9 @@ make_sd: $(bbl)
 
 $(buildroot_initramfs_sysroot)/usr/bin/timed-run: rsa/timed-run.cpp
 	riscv64-unknown-linux-gnu-g++ -I$(RISCV)/include -static $< -o $@
+
+$(buildroot_initramfs_sysroot)/usr/bin/run-spec: rsa/run-spec
+	cp $< $@
 
 $(buildroot_initramfs_sysroot)/usr/bin/mount-spec:
 	mkdir -p $(buildroot_initramfs_sysroot)/root/spec
