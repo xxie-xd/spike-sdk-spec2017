@@ -120,7 +120,7 @@ ifeq ($(ISA),$(filter rv32%,$(ISA)))
 	$(MAKE) -C $(linux_srcdir) O=$(linux_wrkdir) ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- olddefconfig
 endif
 
-$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) $(buildroot_initramfs_sysroot)/usr/bin/timed-run $(buildroot_initramfs_sysroot)/usr/bin/mount-spec $(buildroot_initramfs_sysroot)/usr/bin/run-spec
+$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) $(buildroot_initramfs_sysroot)/usr/bin/timed-run $(buildroot_initramfs_sysroot)/usr/bin/mount-spec $(buildroot_initramfs_sysroot)/usr/bin/run-spec  $(buildroot_initramfs_sysroot)/usr/bin/allocate-hugepages
 	$(MAKE) -C $< O=$(linux_wrkdir) \
 		CONFIG_INITRAMFS_SOURCE="$(confdir)/initramfs.txt $(buildroot_initramfs_sysroot)" \
 		CONFIG_INITRAMFS_ROOT_UID=$(shell id -u) \
@@ -243,6 +243,10 @@ $(buildroot_initramfs_sysroot)/usr/bin/run-spec: rsa/run-spec
 $(buildroot_initramfs_sysroot)/usr/bin/mount-spec:
 	mkdir -p $(buildroot_initramfs_sysroot)/root/spec
 	echo "mount -t 9p -o msize=8192 /dev/root /root/spec" > $@
+	chmod u+x $@
+
+$(buildroot_initramfs_sysroot)/usr/bin/allocate-hugepages:
+	echo 'echo $${1:-512} > /proc/sys/vm/nr_hugepages' >> $@
 	chmod u+x $@
 
 .PHONY: install
