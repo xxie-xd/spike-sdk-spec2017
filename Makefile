@@ -32,7 +32,8 @@ buildroot_initramfs_sysroot_modifications = \
 	$(buildroot_initramfs_sysroot)/usr/bin/timed-run \
 	$(buildroot_initramfs_sysroot)/usr/bin/mount-spec \
 	$(buildroot_initramfs_sysroot)/usr/bin/run-spec \
-	$(buildroot_initramfs_sysroot)/usr/bin/allocate-hugepages 
+	$(buildroot_initramfs_sysroot)/usr/bin/allocate-hugepages \
+	$(buildroot_initramfs_sysroot)/root/.profile
 
 linux_srcdir := $(srcdir)/linux
 linux_wrkdir := $(wrkdir)/linux
@@ -275,6 +276,17 @@ $(buildroot_initramfs_sysroot)/usr/bin/mount-spec:
 $(buildroot_initramfs_sysroot)/usr/bin/allocate-hugepages:
 	echo 'echo $${1:-512} > /proc/sys/vm/nr_hugepages' >> $@
 	chmod u+x $@
+
+define root_profile_content =
+if [ -d "$$HOME/spec" ] ; then 
+  if [ -f "$$HOME/spec/.profile" ] ; then 
+    . "$$HOME/spec/.profile"
+  fi 
+fi
+endef
+
+$(buildroot_initramfs_sysroot)/root/.profile:
+	echo $(root_profile_content) > $@
 
 .PHONY: install
 install: $(bbl)
