@@ -28,6 +28,12 @@ buildroot_initramfs_config := $(confdir)/buildroot_initramfs_config
 buildroot_initramfs_sysroot_stamp := $(wrkdir)/.buildroot_initramfs_sysroot
 buildroot_initramfs_sysroot := $(topdir)/rootfs/buildroot_initramfs_sysroot
 
+buildroot_initramfs_sysroot_modifications = \
+	$(buildroot_initramfs_sysroot)/usr/bin/timed-run \
+	$(buildroot_initramfs_sysroot)/usr/bin/mount-spec \
+	$(buildroot_initramfs_sysroot)/usr/bin/run-spec \
+	$(buildroot_initramfs_sysroot)/usr/bin/allocate-hugepages 
+
 linux_srcdir := $(srcdir)/linux
 linux_wrkdir := $(wrkdir)/linux
 linux_defconfig := $(confdir)/linux_defconfig
@@ -104,6 +110,27 @@ $(buildroot_initramfs_sysroot): $(buildroot_initramfs_tar)
 	mkdir -p $(buildroot_initramfs_sysroot)
 	tar -xpf $< -C $(buildroot_initramfs_sysroot) --exclude ./dev --exclude ./usr/share/locale
 
+.PHONY: buildroot_initramfs_sysroot-clean buildroot_initramfs_sysroot-rebuild vmlinux-initramfs-clean
+# clear buildroot initramfs build target, 
+#   make this every time after post-build.sh is updated, and then make bbl;
+# ref: https://stackoverflow.com/a/49862790/24082431
+buildroot_initramfs_sysroot-clean: 
+	rm -rf $(buildroot_initramfs_wrkdir)/target $(buildroot_initramfs_wrkdir)/images/rootfs.tar 
+	rm -rf $(buildroot_initramfs_sysroot) 
+	find $(buildroot_initramfs_wrkdir) -name ".stamp_target_installed" -delete
+	rm -f $(buildroot_initramfs_wrkdir)/build/host-gcc-final-*/.stamp_host_installed
+
+# clear buildroot initramfs intermediate files in build/linux,
+# 	make this every time after changing files under $(buildroot_initramfs_sysroot),
+#		and then make bbl
+vmlinux-initramfs-clean:
+	rm -rf $(linux_wrkdir)/usr/initramfs_data.cpio $(linux_wrkdir)/usr/initramfs_inc_data $(vmlinux) $(vmlinux_stripped)
+
+# shortcut to rebuild necessary targets related to buildroot initramfs,
+#		make this or make bbl after changing files under $(buildroot_initramfs_sysroot)
+buildroot_initramfs_sysroot-rebuild: $(buildroot_initramfs_sysroot) $(vmlinux) $(bbl) install-spec install-attack
+
+
 $(linux_wrkdir)/.config: $(linux_defconfig) $(linux_srcdir) $(toolchain_dest)/bin/$(target_linux)-gcc
 	mkdir -p $(dir $@)
 	cp -p $< $@
@@ -120,7 +147,7 @@ ifeq ($(ISA),$(filter rv32%,$(ISA)))
 	$(MAKE) -C $(linux_srcdir) O=$(linux_wrkdir) ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- olddefconfig
 endif
 
-$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) $(buildroot_initramfs_sysroot)/usr/bin/timed-run $(buildroot_initramfs_sysroot)/usr/bin/mount-spec $(buildroot_initramfs_sysroot)/usr/bin/run-spec  $(buildroot_initramfs_sysroot)/usr/bin/allocate-hugepages
+$(vmlinux): $(linux_srcdir) $(linux_wrkdir)/.config $(buildroot_initramfs_sysroot) $(buildroot_initramfs_sysroot_modifications)
 	$(MAKE) -C $< O=$(linux_wrkdir) \
 		CONFIG_INITRAMFS_SOURCE="$(confdir)/initramfs.txt $(buildroot_initramfs_sysroot)" \
 		CONFIG_INITRAMFS_ROOT_UID=$(shell id -u) \
